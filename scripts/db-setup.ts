@@ -32,6 +32,13 @@ async function main() {
   const sql = readFileSync(join(process.cwd(), "drizzle", "0000_init.sql"), "utf8");
   const client = postgres(url, { prepare: false, max: 1 });
 
+  if (process.argv.includes("--reset")) {
+    console.log("dropping every table, this deletes all data");
+    await client.unsafe(
+      "DROP TABLE IF EXISTS enrollment_snapshot, section, course, subject_area CASCADE",
+    );
+  }
+
   console.log("applying drizzle/0000_init.sql");
   await client.unsafe(sql);
   console.log("tables ready");

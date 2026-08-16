@@ -72,7 +72,9 @@ export async function seedDemoData(db: AnyDb) {
       // seats trickling back during add and drop.
       const rand = rng((seed += 31));
       const rows = [];
-      const start = new Date("2026-09-15T08:00:00Z").getTime();
+      // 21 days ending now, so the demo history lines up with today rather than
+      // sitting in the future and confusing everyone who reads the chart.
+      const start = Date.now() - 21 * 24 * 3_600_000;
       let taken = Math.round(c.seats * 0.35);
       let waitTaken = 0;
 
