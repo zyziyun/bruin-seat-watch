@@ -42,3 +42,6 @@ next-env.d.ts
 
 # local PGlite database
 .pglite
+
+# the template is safe to commit, the real values are not
+!.env.example
