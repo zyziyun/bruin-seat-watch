@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { searchSections } from "@/db/queries";
+import { dbUnavailableReason } from "@/db/status";
 import { fail, ok, preflight } from "../_lib/respond";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,9 @@ export function OPTIONS() {
  * Latest known enrollment state for each matching section.
  */
 export async function GET(req: NextRequest) {
+  const blocked = dbUnavailableReason();
+  if (blocked) return fail(503, blocked);
+
   const q = req.nextUrl.searchParams.get("q") ?? "";
 
   // Cap the input. An unbounded string goes straight into an ILIKE pattern, and

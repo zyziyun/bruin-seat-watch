@@ -1,4 +1,5 @@
 import { getSnapshots } from "@/db/queries";
+import { dbUnavailableReason } from "@/db/status";
 import { fail, intParam, ok, preflight } from "../../../_lib/respond";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,9 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const blocked = dbUnavailableReason();
+  if (blocked) return fail(503, blocked);
+
   const { id } = await params;
   const sectionId = intParam(id);
   if (sectionId === null) return fail(400, "id must be a positive integer");

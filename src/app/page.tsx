@@ -1,8 +1,40 @@
 import Link from "next/link";
 import { countSnapshots, searchSections } from "@/db/queries";
 import { usingPglite } from "@/db";
+import { dbUnavailableReason } from "@/db/status";
 
 export const dynamic = "force-dynamic";
+
+function SetupNeeded({ reason }: { reason: string }) {
+  return (
+    <main className="mx-auto max-w-2xl px-6 py-20">
+      <h1 className="text-2xl font-semibold tracking-tight">Bruin Seat Watch</h1>
+      <p className="mt-6 rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+        {reason}
+      </p>
+      <ol className="mt-6 list-decimal space-y-2 pl-5 text-sm text-neutral-700 dark:text-neutral-300">
+        <li>
+          Create a free Postgres database at{" "}
+          <a className="underline" href="https://neon.com">
+            neon.com
+          </a>{" "}
+          and copy the connection string.
+        </li>
+        <li>
+          In Vercel, open this project, Settings, Environment Variables, and add{" "}
+          <code className="rounded bg-neutral-100 px-1 dark:bg-neutral-800">DATABASE_URL</code>{" "}
+          and{" "}
+          <code className="rounded bg-neutral-100 px-1 dark:bg-neutral-800">INGEST_TOKEN</code>.
+        </li>
+        <li>
+          Run <code className="rounded bg-neutral-100 px-1 dark:bg-neutral-800">pnpm db:setup --seed</code>{" "}
+          locally against that same connection string to create the tables.
+        </li>
+        <li>Redeploy.</li>
+      </ol>
+    </main>
+  );
+}
 
 function SeatBar({ taken, total }: { taken: number; total: number }) {
   const pct = Math.min(100, Math.round((taken / total) * 100));
@@ -23,6 +55,10 @@ export default async function Home({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q = "" } = await searchParams;
+
+  const blocked = dbUnavailableReason();
+  if (blocked) return <SetupNeeded reason={blocked} />;
+
   const [rows, total] = await Promise.all([searchSections(q), countSnapshots()]);
 
   return (
