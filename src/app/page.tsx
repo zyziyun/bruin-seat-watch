@@ -1,69 +1,91 @@
-import Image from "next/image";
+import Link from "next/link";
+import { countSnapshots, searchSections } from "@/db/queries";
+import { usingPglite } from "@/db";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+function SeatBar({ taken, total }: { taken: number; total: number }) {
+  const pct = Math.min(100, Math.round((taken / total) * 100));
+  const full = taken >= total;
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="h-2 w-full overflow-hidden rounded bg-neutral-200 dark:bg-neutral-800">
+      <div
+        className={full ? "h-full bg-red-500" : "h-full bg-emerald-500"}
+        style={{ width: `${pct}%` }}
+      />
     </div>
+  );
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q = "" } = await searchParams;
+  const [rows, total] = await Promise.all([searchSections(q), countSnapshots()]);
+
+  return (
+    <main className="mx-auto max-w-3xl px-6 py-16">
+      <h1 className="text-3xl font-semibold tracking-tight">Bruin Seat Watch</h1>
+      <p className="mt-2 text-neutral-600 dark:text-neutral-400">
+        UCLA publishes live seat counts but nobody keeps the history. We snapshot
+        every section every 15 minutes so you can see whether a full class
+        actually opens up.
+      </p>
+
+      {usingPglite && (
+        <p className="mt-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          Running on the local PGlite fallback with generated demo data. Set
+          DATABASE_URL to use real Postgres.
+        </p>
+      )}
+
+      <form className="mt-8 flex gap-2">
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="COM SCI 32, or data science"
+          className="flex-1 rounded border border-neutral-300 px-3 py-2 outline-none focus:border-neutral-900 dark:border-neutral-700 dark:bg-neutral-950 dark:focus:border-neutral-300"
+        />
+        <button className="rounded bg-neutral-900 px-4 py-2 text-white dark:bg-white dark:text-neutral-900">
+          Search
+        </button>
+      </form>
+
+      <p className="mt-4 text-sm text-neutral-500">
+        {total.toLocaleString()} snapshots stored · {rows.length} sections shown
+      </p>
+
+      <ul className="mt-4 divide-y divide-neutral-200 dark:divide-neutral-800">
+        {rows.map((r) => (
+          <li key={r.sectionId} className="py-4">
+            <Link href={`/section/${r.sectionId}`} className="block group">
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="font-medium group-hover:underline">
+                  {r.subjectCode} {r.number} · {r.activity}
+                </span>
+                <span className="shrink-0 text-sm text-neutral-500">
+                  {r.seatsTaken}/{r.seatsTotal}
+                  {r.waitlistTaken > 0 && ` · WL ${r.waitlistTaken}`}
+                </span>
+              </div>
+              <div className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+                {r.title}
+              </div>
+              <div className="mt-2">
+                <SeatBar taken={r.seatsTaken} total={r.seatsTotal} />
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      {rows.length === 0 && (
+        <p className="mt-8 text-neutral-500">
+          No sections matched. Try COM SCI, or leave the box empty.
+        </p>
+      )}
+    </main>
   );
 }
